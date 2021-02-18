@@ -428,15 +428,34 @@ void handle_instruction()
 				NEXT_STATE.REGS[rd] = CURRENT_STATE.REGS[rt];
 				print_instruction(CURRENT_STATE.PC);
 				break;
+
+
+			case(0x08): //JR-
+            			NEXT_STATE.PC = CURRENT_STATE.REGS[rs];
+            			print_instruction(CURRENT_STATE.PC);
+            			break;    
+       
+        		case(0x09): //JALR-
+            			if( rd == 0x0){
+                			NEXT_STATE.REGS[31] = CURRENT_STATE.PC + 8;
+                			NEXT_STATE.PC = CURRENT_STATE.REGS[rs];
+            			}
+            			else{
+                			NEXT_STATE.REGS[rd] = CURRENT_STATE.PC + 8;
+                			NEXT_STATE.PC = CURRENT_STATE.REGS[rs];
+            			}
+            			print_instruction(CURRENT_STATE.PC);     
+            			break;
+
 			case 0x0C: //SYSCALL
-				//if(CURRENT_STATE.REGS[2] == 0xa){
+				CURRENT_STATE.REGS[2] == 0xa;
 					RUN_FLAG = FALSE;
 				print_instruction(CURRENT_STATE.PC);
-				//}
+				
 				break;	
-		}
+		
 	}
-
+}
 	else{
 	switch(opcode){
 		case 0x08: // ADDI
@@ -472,6 +491,104 @@ void handle_instruction()
 			else NEXT_STATE.REGS[rd] = 0x0000;
 			print_instruction(CURRENT_STATE.PC);
 			break;
+
+
+
+		case(0x23): //LW- load word
+            		NEXT_STATE.REGS[rt] = mem_read_32(CURRENT_STATE.REGS[rs] + immediate);
+            		print_instruction(CURRENT_STATE.PC);
+            		break;
+        		case(0x20): //LB- load byte
+            		NEXT_STATE.REGS[rt] = mem_read_32(CURRENT_STATE.REGS[rs] + immediate) & 0x000000FF;
+            		print_instruction(CURRENT_STATE.PC);
+            		break;
+       		case(0x21): //LH- load half-word
+            		NEXT_STATE.REGS[rt] = mem_read_32(CURRENT_STATE.REGS[rs] + immediate) & 0x0000FFFF;
+            		print_instruction(CURRENT_STATE.PC);
+            		break;
+        	case(0x0F): //LUI-
+            		NEXT_STATE.REGS[rt] = immediate << 16;
+            		print_instruction(CURRENT_STATE.PC);
+            		break;
+        	case(0x2B): //SW- store word
+            		mem_write_32(CURRENT_STATE.REGS[rs] + immediate, CURRENT_STATE.REGS[rt]);
+            		print_instruction(CURRENT_STATE.PC);
+            		break;
+        	case(0x28): //SB- store byte
+            		mem_write_32(CURRENT_STATE.REGS[rs] + immediate, CURRENT_STATE.REGS[rt] & 0x000000FF);
+            		print_instruction(CURRENT_STATE.PC);
+            		break;
+        	case(0x29): //SH- store half-word
+            		mem_write_32(CURRENT_STATE.REGS[rs] + immediate, CURRENT_STATE.REGS[rt] & 0x0000FFFF);
+            		print_instruction(CURRENT_STATE.PC);
+            		break;
+        	case(0x10): //MFHI-
+            		NEXT_STATE.REGS[rd] = CURRENT_STATE.HI;
+            		print_instruction(CURRENT_STATE.PC);
+           		 break;
+        	case(0x12): //MFLO-
+            		NEXT_STATE.REGS[rd] = CURRENT_STATE.LO;
+            		print_instruction(CURRENT_STATE.PC);
+            		break;
+        	case(0x11): //MTHI-
+            		NEXT_STATE.HI = CURRENT_STATE.REGS[rs];
+            		print_instruction(CURRENT_STATE.PC);
+            		break;
+
+
+
+	        case(0x13): //MTLO-
+            		NEXT_STATE.LO = CURRENT_STATE.REGS[rs];
+            		print_instruction(CURRENT_STATE.PC);
+            		break;
+        	case(0x04): //BEQ-
+            		if(CURRENT_STATE.REGS[rs] == CURRENT_STATE.REGS[rt]){
+                	NEXT_STATE.PC = CURRENT_STATE.PC + 4 + immediate;
+            		}
+            		print_instruction(CURRENT_STATE.PC);
+            		break;
+        	case(0x05): //BNE-
+            		if(CURRENT_STATE.REGS[rs] != CURRENT_STATE.REGS[rt]){
+                		NEXT_STATE.PC = CURRENT_STATE.PC + 4 + immediate;
+            		}
+            		print_instruction(CURRENT_STATE.PC);
+            		break;
+        	case(0x06): //BLEZ-
+            		if(CURRENT_STATE.REGS[rs] <= 0){
+                		NEXT_STATE.PC = CURRENT_STATE.PC + 4 + immediate;
+            		}
+            		print_instruction(CURRENT_STATE.PC);
+            		break;
+        	case(0x01): //BLTZ and BGEZ- have same opcode, rt section is different
+            		if(rt == 0){ //BLTZ
+                		if(CURRENT_STATE.REGS[rs] < 0){
+                    		NEXT_STATE.PC = CURRENT_STATE.PC + 4 + immediate;
+                		}
+            		}
+            		else{ //BGEZ rt == 1
+                		if(CURRENT_STATE.REGS[rs] >= 0){
+                    			NEXT_STATE.PC = CURRENT_STATE.PC + 4 + immediate;
+                		}
+            		}
+            		print_instruction(CURRENT_STATE.PC);
+            		break;
+        	case(0x07): //BGTZ-
+            		if(CURRENT_STATE.REGS[rs] > 0){
+                		NEXT_STATE.PC = CURRENT_STATE.PC + 4 + immediate;
+            		}
+            		print_instruction(CURRENT_STATE.PC);
+            		break;
+        	case(0x02): //J-
+            		NEXT_STATE.PC = target;
+            		print_instruction(CURRENT_STATE.PC);
+            		break;
+        	case(0x03): //JAL-
+            		NEXT_STATE.REGS[31] = CURRENT_STATE.PC + 8;
+            		NEXT_STATE.PC = target;
+            		print_instruction(CURRENT_STATE.PC);
+
+
+
 	}
 	}
 	NEXT_STATE.PC = CURRENT_STATE.PC + 4;
@@ -506,10 +623,180 @@ void print_program(){
 /* Print the instruction at given memory address (in MIPS assembly format)    */
 /************************************************************/
 void print_instruction(uint32_t addr){
-	/*IMPLEMENT THIS*/
-	//printf("test");
+	
+	uint32_t instruction, opcode, function, rs, rt, rd, sa, immediate, target;
 
-	printf("[0x%x]\t", addr);
+        instruction = mem_read_32(addr);
+        //printf("instruction:0x%x \n", instruction);
+
+        opcode = (instruction & 0xfc000000) >> 26;
+        function = (instruction & 0x3f);
+        rs = (instruction & 0x03e00000) >> 21;
+        rt = (instruction & 0x001f0000) >> 16;
+        rd = (instruction & 0x0000f800) >> 11;
+        sa = (instruction & 0x000007c0) >> 6;
+        immediate = (instruction & 0x0000ffff);
+        target = (instruction & 0x03ffffff);
+    char reg_name[32][6] = {"$zero", "$at", "$v0", "$v1", "$a0","$a1", "$a2", "$a3", "$t0","$t1", "$t2", "$t3", "$t4", "$t5", "$t6", "$t7", "$s0", "$s1", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7", "$t8", "$t9", "$k0", "$k1", "$gp", "$sp", "$fp", "$ra"};
+if(opcode == 0){ //R-type Instructions all have 000000 opcode
+    switch(function){ //determine function code which is from bit 0-5
+        case(0x20): //ADD
+            printf("add %s %s %s", reg_name[rd], reg_name[rs], reg_name[rt]);
+            break;
+        case(0x21): //ADDU
+            printf("addu %s %s %s", reg_name[rd], reg_name[rs], reg_name[rt]);
+            break;
+        case(0x22): //SUB
+            printf("sub %s %s %s", reg_name[rd], reg_name[rs], reg_name[rt]);
+            break;
+        case(0x23): //SUBU
+            printf("subu %s %s %s", reg_name[rd], reg_name[rs], reg_name[rt]);
+            break;
+        case(0x18): //MULT
+            printf("mult %s %s", reg_name[rs], reg_name[rt]);
+            break;
+        case(0x19): //MULTU
+            printf("multu %s %s", reg_name[rs], reg_name[rt]);
+            break;
+        case(0x1A): //DIV
+            printf("div %s %s", reg_name[rs], reg_name[rt]);
+            break;
+        case(0x1B): //DIVU
+            printf("divu %s %s", reg_name[rs], reg_name[rt]);
+            break;
+        case(0x25): //OR
+            printf("or %s %s %s", reg_name[rd], reg_name[rs], reg_name[rt]);
+            break;
+        case(0x24): //AND
+            printf("and %s %s %s", reg_name[rd], reg_name[rs], reg_name[rt]);
+            break;
+        case(0x26): //XOR
+            printf("xor %s %s %s", reg_name[rd], reg_name[rs], reg_name[rt]);
+            break;
+        case(0x27): //NOR
+            printf("nor %s %s %s", reg_name[rd], reg_name[rs], reg_name[rt]);
+            break;
+        case(0x2A): //SLT
+            printf("slt %s %s %s", reg_name[rd], reg_name[rs], reg_name[rt]);
+            break;
+        case(0x00): //SLL
+	printf("sll %s %s %x", reg_name[rd], reg_name[rt], sa);
+            break;
+        case(0x02): //SRL
+            printf("srl %s %s %x", reg_name[rd], reg_name[rt], sa);
+            break;
+        case(0x03): //SRA
+            printf("sra %s %s %x", reg_name[rd], reg_name[rt], sa);
+            break;
+
+        case(0x08): //JR-
+            printf("jr %s", reg_name[rs]);
+            break;
+
+        case(0x09): //JALR-
+            if(rd == 0){
+                printf("jalr %s", reg_name[rs]);
+            }
+            else{
+                printf("jalr %s %s ", reg_name[rd], reg_name[rs]);
+            }
+            break;
+        case(0x0C): //SYSCALL-
+            printf("SYSCALL");
+            break;
+    }//end switch
+}
+
+//System Call: SYSCALL (you should implement it to exit the program. To exit the program, the value of 10 (0xA in hex) should be in $v0 when SYSCALL is executed.
+
+else{ //I-type and J-type instructions have non-zero opcodes
+    switch(opcode){
+        case(0x08): //ADDI
+            printf("addi %s %s %x", reg_name[rt], reg_name[rs], immediate);
+            break;
+        case(0x09): //ADDIU
+           printf("addiu %s %s %x", reg_name[rs], reg_name[rt], immediate);
+            break;
+        case(0x0C): //ANDI
+            printf("andi %s %s %x", reg_name[rt], reg_name[rs], immediate);
+            break;
+        case(0x0D): //ORI
+            printf("ori %s %s %x", reg_name[rt], reg_name[rs], immediate);
+            break;
+        case(0x0E): //XORI
+            printf("xori %s %s %x", reg_name[rt], reg_name[rs], immediate);
+            break;
+        case(0x0A): //SLTI
+            printf("slti %s %s %x", reg_name[rt], reg_name[rs], immediate);
+            break;
+        case(0x23): //LW-
+            printf("lw %s %s(%x)", reg_name[rt], reg_name[rs], immediate);
+            break;
+        case(0x20): //LB-
+            printf("lb %s %s(%x)", reg_name[rt], reg_name[rs], immediate);
+            break;
+        case(0x21): //LH-
+            printf("lh %s %s(%x)", reg_name[rt], reg_name[rs], immediate);
+	break;
+        case(0x0F): //LUI-
+            printf("lui %s %x", reg_name[rt], immediate);
+            break;
+        case(0x2B): //SW-
+            printf("sw %s %s(%x)", reg_name[rt], reg_name[rs], immediate);
+            break;
+        case(0x28): //SB-
+            printf("sb %s %s(%x)", reg_name[rt], reg_name[rs], immediate);
+            break;
+        case(0x29): //SH-
+            printf("sh %s %s(%x)", reg_name[rt], reg_name[rs], immediate);
+            break;
+        case(0x10): //MFHI-
+            printf("mfhi %s", reg_name[rd]);
+            break;
+        case(0x12): //MFLO-
+            printf("mflo %s", reg_name[rd]);
+            break;
+        case(0x11): //MTHI-
+            printf("mthi %s", reg_name[rs]);
+            break;
+        case(0x13): //MTLO-
+            printf("mtlo %s", reg_name[rs]);
+            break;
+        case(0x04): //BEQ-
+            printf("beq %s %s %x", reg_name[rs], reg_name[rt], immediate);
+            break;
+        case(0x05): //BNE-
+            printf("bne %s %s %x", reg_name[rs], reg_name[rt], immediate);
+            break;
+        case(0x06): //BLEZ-
+            printf("blez %s %x", reg_name[rs], immediate);
+            break;
+        case(0x01): //BLTZ and BGEZ- have same opcode, rt section is different
+            if(rt == 0){ //BLTZ
+                printf("bltz %s %x", reg_name[rs], immediate);
+            }
+            else{ //BGEZ rt == 1
+                printf("bgez %s %x", reg_name[rs], immediate);
+            }
+            break;
+        case(0x07): //BGTZ-
+            printf("bgtz %s %x", reg_name[rs], immediate);
+            break;
+        case(0x02): //J-
+            printf("j %x", target);
+            break;
+        case(0x03): //JAL-
+            printf("jal %x", target);
+            break;
+    }//end switch
+}
+
+
+
+
+
+
+
 }
 
 /***************************************************************/
