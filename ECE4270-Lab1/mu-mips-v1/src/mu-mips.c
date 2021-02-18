@@ -307,6 +307,174 @@ void handle_instruction()
 {
 	/*IMPLEMENT THIS*/
 	/* execute one instruction at a time. Use/update CURRENT_STATE and and NEXT_STATE, as necessary.*/
+
+	uint32_t instruction, opcode, function, rs, rt, rd, sa, immediate, target;
+	uint64_t product, p1, p2;
+
+	uint32_t addr, data;
+
+	printf("[0x%x]\t", CURRENT_STATE.PC);
+
+	instruction = mem_read_32(CURRENT_STATE.PC);
+	printf("instruction:0x%x \n", instruction);
+
+	opcode = (instruction & 0xfc000000) >> 26;
+	function = (instruction & 0x3f);
+	rs = (instruction & 0x03e00000) >> 21;
+	rt = (instruction & 0x001f0000) >> 16;
+	rd = (instruction & 0x0000f800) >> 11;
+	sa = (instruction & 0x000007c0) >> 6;
+	immediate = (instruction & 0x0000ffff);
+	target = (instruction & 0x03ffffff);
+	
+
+	if(opcode == 0x00){
+		switch(function){
+			case 0x20: // ADD
+				NEXT_STATE.REGS[rd] = CURRENT_STATE.REGS[rs] + CURRENT_STATE.REGS[rt];
+				print_instruction(CURRENT_STATE.PC);
+				break;
+			case 0x21: // ADDU
+				NEXT_STATE.REGS[rd] = CURRENT_STATE.REGS[rs] + CURRENT_STATE.REGS[rt];
+				print_instruction(CURRENT_STATE.PC);
+				break;
+			case 0x22: //SUB
+				NEXT_STATE.REGS[rd] = CURRENT_STATE.REGS[rs] - CURRENT_STATE.REGS[rt];
+				print_instruction(CURRENT_STATE.PC);
+				break;
+			case 0x23: //SUBU
+				NEXT_STATE.REGS[rd] = CURRENT_STATE.REGS[rs] - CURRENT_STATE.REGS[rt];
+				print_instruction(CURRENT_STATE.PC);
+				break;
+			case 0x18: //MULT
+
+				p1 = (uint64_t)CURRENT_STATE.REGS[rs];
+				p2 = (uint64_t)CURRENT_STATE.REGS[rt];
+
+				product = p1 * p2;
+
+				NEXT_STATE.LO = (uint32_t)(product & 0xffffffff);
+				NEXT_STATE.HI = (uint32_t)((product & 0xffffffff00000000) >> 32);
+				print_instruction(CURRENT_STATE.PC);
+				break;
+
+			case 0x19: //MULTU
+				p1 = (uint64_t)(0x00000000 | CURRENT_STATE.REGS[rs]);
+				p2 = (uint64_t)(0x00000000 | CURRENT_STATE.REGS[rt]);
+
+				product = p1 * p2;
+
+				NEXT_STATE.LO = (uint32_t)(product & 0xffffffff);
+				NEXT_STATE.HI = (uint32_t)((product & 0xffffffff00000000) >> 32);
+				print_instruction(CURRENT_STATE.PC);
+				break;
+
+			case 0x1A: //DIV
+				NEXT_STATE.LO = CURRENT_STATE.REGS[rs] / CURRENT_STATE.REGS[rt];
+				NEXT_STATE.HI = CURRENT_STATE.REGS[rs] % CURRENT_STATE.REGS[rs];
+				print_instruction(CURRENT_STATE.PC);
+				break;
+
+			case 0x1B: //DIVU
+				NEXT_STATE.LO = (0x00000000 | CURRENT_STATE.REGS[rs]) / (0x00000000 | CURRENT_STATE.REGS[rt]);
+				NEXT_STATE.HI = (0x00000000 | CURRENT_STATE.REGS[rs]) % (0x00000000 | CURRENT_STATE.REGS[rt]);
+				print_instruction(CURRENT_STATE.PC);
+				break;
+			case 0x14: //AND
+				NEXT_STATE.REGS[rd] = CURRENT_STATE.REGS[rs] & CURRENT_STATE.REGS[rt];
+				print_instruction(CURRENT_STATE.PC);
+				break;
+			case 0x25: //OR
+				NEXT_STATE.REGS[rd] = CURRENT_STATE.REGS[rs] | CURRENT_STATE.REGS[rt];
+				print_instruction(CURRENT_STATE.PC);
+				break; 
+			case 0x26: //XOR
+				NEXT_STATE.REGS[rd] = CURRENT_STATE.REGS[rs] ^ CURRENT_STATE.REGS[rt];
+				print_instruction(CURRENT_STATE.PC);
+				break;
+			case 0x27: //NOR
+				NEXT_STATE.REGS[rd] = ~(CURRENT_STATE.REGS[rs] | CURRENT_STATE.REGS[rt]);
+				print_instruction(CURRENT_STATE.PC);
+				break;
+
+			case 0x2C: //SLT
+				if(CURRENT_STATE.REGS[rs] < CURRENT_STATE.REGS[rd]) NEXT_STATE.REGS[rd] = 0x00000001;
+				else NEXT_STATE.REGS[rd] = 0x00000000;
+				print_instruction(CURRENT_STATE.PC);
+				break;
+
+			case 0x00: //SLL
+				NEXT_STATE.REGS[rd] = CURRENT_STATE.REGS[rt] << sa;
+				print_instruction(CURRENT_STATE.PC);
+				break;
+			case 0x02: //SRL
+				NEXT_STATE.REGS[rd] = CURRENT_STATE.REGS[rt] >> sa;
+				print_instruction(CURRENT_STATE.PC);
+				break;
+
+			case 0x03: //SRA
+				if((CURRENT_STATE.REGS[rt] & 0x10) == 0x10){
+					for(int i = 0; i < sa; ++i){
+						CURRENT_STATE.REGS[rt] = CURRENT_STATE.REGS[rt] >> 1;
+						CURRENT_STATE.REGS[rt] = CURRENT_STATE.REGS[rt] | 0x10; 
+					}
+				}
+
+				else{
+					for(int i = 0; i < sa; ++i){
+						CURRENT_STATE.REGS[rt] = CURRENT_STATE.REGS[rt] >> 1;
+					}	
+				}
+				NEXT_STATE.REGS[rd] = CURRENT_STATE.REGS[rt];
+				print_instruction(CURRENT_STATE.PC);
+				break;
+			case 0x0C: //SYSCALL
+				//if(CURRENT_STATE.REGS[2] == 0xa){
+					RUN_FLAG = FALSE;
+				print_instruction(CURRENT_STATE.PC);
+				//}
+				break;	
+		}
+	}
+
+	else{
+	switch(opcode){
+		case 0x08: // ADDI
+			NEXT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] + immediate;
+			print_instruction(CURRENT_STATE.PC);
+			break;
+
+		case 0x09: // ADDIU
+			NEXT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] + immediate;
+			print_instruction(CURRENT_STATE.PC);
+			break;
+		case 0x0C: //ANDI
+			NEXT_STATE.REGS[rt] = (0x00000000 | (immediate & CURRENT_STATE.REGS[rs]));
+			print_instruction(CURRENT_STATE.PC);
+			break;
+
+		case 0x0D: //ORI
+
+			NEXT_STATE.REGS[rt] = ((CURRENT_STATE.REGS[rs] & 0xffff0000) | ((immediate | (CURRENT_STATE.REGS[rs] & 0xffff))));
+			print_instruction(CURRENT_STATE.PC);
+			break;
+
+		case 0x0E: //XORI
+			 
+			NEXT_STATE.REGS[rt] = CURRENT_STATE.REGS[rs] ^ (immediate >> 16);
+			print_instruction(CURRENT_STATE.PC);
+			break;
+
+		case 0x0A: //SLTI
+			if ((immediate & 0x8000) == 0x8000) immediate = immediate | 0xffff0000;
+
+			if(CURRENT_STATE.REGS[rs] < immediate) NEXT_STATE.REGS[rd] = 0x0001;
+			else NEXT_STATE.REGS[rd] = 0x0000;
+			print_instruction(CURRENT_STATE.PC);
+			break;
+	}
+	}
+	NEXT_STATE.PC = CURRENT_STATE.PC + 4;
 }
 
 
@@ -339,6 +507,9 @@ void print_program(){
 /************************************************************/
 void print_instruction(uint32_t addr){
 	/*IMPLEMENT THIS*/
+	//printf("test");
+
+	printf("[0x%x]\t", addr);
 }
 
 /***************************************************************/
